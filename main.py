@@ -7,7 +7,6 @@ from selenium.webdriver.chrome.service import Service as ServiceChrome
 from webdriver_manager.chrome import ChromeDriverManager
 import telebot
 import logging
-from test_app import app
 
 # Configurar o bot do Telegram
 # Coloque aqui o token do seu bot
@@ -57,6 +56,4 @@ def echo(message):
     driver.quit()
 
 # Iniciar o bot
-if __name__ == '__main__':
-	app.run(host="0.0.0.0", port=4000)
-	bot.polling()
+bot.polling()
