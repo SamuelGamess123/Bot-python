@@ -1,74 +1,59 @@
-# Importar as bibliotecas necessárias
-import requests
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service as ServiceChrome
+from webdriver_manager.chrome import ChromeDriverManager
 import telebot
-import os
+import logging
 
-# Criar um bot do telegram com o token fornecido
-TOKEN = "6650035920:AAFAZg7PD7vgsLvC4cJWBPowgCMCuld4zls"
+# Configurar o bot do Telegram
+# Coloque aqui o token do seu bot
+TOKEN = '6986018501:AAFMZ0VCxW1toU9bqvz6zlrrlI_dW345b6s'
+
+# Inicializar o bot do Telegram
 bot = telebot.TeleBot(TOKEN)
 
-# Definir uma função para verificar se uma mensagem é um link válido
-def is_link(message):
-    # Verificar se a mensagem começa com http ou https
-    if message.startswith("http://") or message.startswith("https://"):
-        # Tentar fazer uma requisição para o link e verificar o status
-        try:
-            response = requests.get(message)
-            if response.status_code == 200:
-                # O link é válido
-                return True
-            else:
-                # O link é inválido
-                return False
-        except:
-            # Ocorreu um erro na requisição
-            return False
-    else:
-        # A mensagem não é um link
-        return False
+# Função para lidar com o comando /start
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.send_message(message.chat.id, "Olá! Como posso ajudar?")
 
-# Definir uma função para obter o código-fonte de uma página web
-def get_source(link):
-    # Fazer uma requisição para o link com o prefixo view-source
-    response = requests.get("view-source:" + link)
-    # Retornar o texto da resposta
-    return response.text
-
-# Definir uma função para salvar o código-fonte em um arquivo HTML
-def save_html(source, filename):
-    # Abrir um arquivo com o nome fornecido no modo de escrita
-    with open(filename, "w") as file:
-        # Escrever o código-fonte no arquivo
-        file.write(source)
-
-# Definir uma função para enviar um arquivo HTML para o usuário
-def send_html(chat_id, filename):
-    # Abrir o arquivo com o nome fornecido no modo de leitura binária
-    with open(filename, "rb") as file:
-        # Enviar o arquivo para o usuário
-        bot.send_document(chat_id, file)
-
-# Definir um manipulador para as mensagens recebidas
+# Função para lidar com as mensagens do usuário
 @bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    # Obter o id do chat e o texto da mensagem
-    chat_id = message.chat.id
+def echo(message):
     text = message.text
-    # Verificar se a mensagem é um link válido
-    if is_link(text):
-        # Obter o código-fonte da página web
-        source = get_source(text)
-        # Gerar um nome de arquivo aleatório com a extensão .html
-        filename = os.urandom(16).hex() + ".html"
-        # Salvar o código-fonte em um arquivo HTML
-        save_html(source, filename)
-        # Enviar o arquivo HTML para o usuário
-        send_html(chat_id, filename)
-        # Deletar o arquivo HTML do servidor
-        os.remove(filename)
-    else:
-        # Enviar uma mensagem de erro para o usuário
-        bot.reply_to(message, "Desculpe, isso não é um link válido.")
+    bot.send_message(message.chat.id, "Carregando...")
+    # Inicializar o driver do Selenium
+    driver = webdriver.Chrome(service=ServiceChrome(ChromeDriverManager().install()), options=options)
+
+    # Acessar o site alvo
+    driver.get('https://www.craiyon.com')
+
+    # Enviar a mensagem do usuário para a textarea
+    prompt = driver.find_element(By.ID, 'prompt')
+    prompt.send_keys(text)
+
+    # Clicar no botão de geração
+    generate_button = driver.find_element(By.ID, 'generateButton')
+    generate_button.click()
+
+    try:
+        # Esperar até que a imagem seja carregada (timeout de 2 minutos)
+        wait = WebDriverWait(driver, 120)
+        image = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'img.h-full.w-full.object-cover.object-center.transition-all.duration-300.sm:group-hover:scale-105')))
+        image_src = image.get_attribute('src')
+
+        # Enviar a imagem para o usuário
+        bot.send_photo(message.chat.id, image_src)
+
+    except TimeoutException:
+        # Caso a imagem não seja encontrada dentro do tempo limite
+        bot.send_message(message.chat.id, "Não foi possível obter a imagem dentro do tempo limite.")
+
+    # Fechar o driver do Selenium
+    driver.quit()
 
 # Iniciar o bot
 bot.polling()
