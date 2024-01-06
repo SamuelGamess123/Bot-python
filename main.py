@@ -42,7 +42,7 @@ def echo(message):
     try:
         # Esperar até que a imagem seja carregada (timeout de 2 minutos)
         wait = WebDriverWait(driver, 120)
-        image = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'img.h-full.w-full.object-cover.object-center.transition-all.duration-300.sm:group-hover:scale-105')))
+        image = wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'h-full w-full object-cover object-center')))
         image_src = image.get_attribute('src')
 
         # Enviar a imagem para o usuário
